@@ -1,8 +1,9 @@
-require 'test_helper'
+require File.dirname(__FILE__) + '/test_helper.rb' 
+load_schema
 
 class RubyFixturesTest < ActiveSupport::TestCase
-  # Replace this with your real tests.
-  test "the truth" do
+
+  test "should " do
     assert true
   end
 end

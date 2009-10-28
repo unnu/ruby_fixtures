@@ -9,10 +9,12 @@ end
 class RubyFixtures
   
   class << self
-    @@fixtures = Hash.new { |hash, key| hash[key] = {}}
+    
+    attr_reader :fixtures
+    @fixtures = Hash.new { |hash, key| hash[key] = {}}
 
-    @@checksum_file = RAILS_ROOT + "/test/.fixtures_checksum"
-    @@fixtures_file = RAILS_ROOT + "/test/fixtures.rb"
+    @checksum_file = RAILS_ROOT + "/test/.fixtures_checksum"
+    @fixtures_file = RAILS_ROOT + "/test/fixtures.rb"
 
     def load
       instance_eval(read_fixtures_file)
@@ -55,7 +57,7 @@ class RubyFixtures
       
       unless self.class.method_defined?(fixture_model_name) 
         self.class.send(:define_method, fixture_model_name) do |fixture_name|
-          @@fixtures[fixture_model_name][fixture_name_in_scenario(fixture_name)]
+          @fixtures[fixture_model_name][fixture_name_in_scenario(fixture_name)]
         end
       end
     end
@@ -80,7 +82,7 @@ class RubyFixtures
         attributes_or_record.each do |attr, fixture_name|
           next unless fixture_name.kind_of? Symbol
           association_name = attr.to_s.pluralize.to_sym
-          attributes_or_record[attr] = __send__(association_name, fixture_name) if @@fixtures.keys.include?(association_name)
+          attributes_or_record[attr] = __send__(association_name, fixture_name) if @fixtures.keys.include?(association_name)
         end
 
         attributes_or_record.merge!(@to_attributes[@fixture_model_name]) if @to_attributes && @to_attributes[@fixture_model_name]
@@ -99,69 +101,71 @@ class RubyFixtures
       end
     end
 
-    def write_yaml
-      unless File.directory?(RAILS_ROOT + "/test/fixtures/")
-        puts "Creating fixtures directory"
-        Dir.mkdir(RAILS_ROOT + "/test/fixtures/")
-      end
-      
-      @@fixtures.each do |fixture_model_name, records|
-        fixture_table_name = fixture_model_name.to_s.classify.constantize.table_name
-        File.open(RAILS_ROOT + "/test/fixtures/#{fixture_table_name}.yml", "w") do |fp|
-          record_attributes = {}
-          records.each do |key, record|
-            record_attributes[key.to_s] = cleaned_up_attributes_for_record(record)
-           end
-          YAML.dump(record_attributes, fp)
-        end
-      end
-    end
-    
-    def cleaned_up_attributes_for_record(record)
-      attributes = record.attributes.dup
-      attributes.each do |key, value|
-        case value
-        when Date, Time, DateTime
-          attributes[key] = value.to_s(:db)
-        when Array, Hash
-          attributes[key] = value.to_yaml
-        end
-      end
-      
-      attributes.stringify_keys!
-    end
+    private
 
-    def delete_old_yml_fixtures
-      Dir.glob(RAILS_ROOT + "/test/fixtures/*.yml").each do |file|
-        File.delete(file)
-      end
-    end
-    
-    def add_fixture(fixture_model_name, name, record, logging_name = name)
-      verb = !@@fixtures[fixture_model_name][name.to_sym].nil? ? 'Updating' : 'Creating'
-      puts "#{verb} #{fixture_model_name.to_s.singularize} :#{logging_name}"
+      def write_yaml
+        unless File.directory?(RAILS_ROOT + "/test/fixtures/")
+          puts "Creating fixtures directory"
+          Dir.mkdir(RAILS_ROOT + "/test/fixtures/")
+        end
       
-      @@fixtures[fixture_model_name][name.to_sym] = record
-    end
+        @fixtures.each do |fixture_model_name, records|
+          fixture_table_name = fixture_model_name.to_s.classify.constantize.table_name
+          File.open(RAILS_ROOT + "/test/fixtures/#{fixture_table_name}.yml", "w") do |fp|
+            record_attributes = {}
+            records.each do |key, record|
+              record_attributes[key.to_s] = cleaned_up_attributes_for_record(record)
+             end
+            YAML.dump(record_attributes, fp)
+          end
+        end
+      end
     
-    def fixture_name_in_scenario(name)
-      (@scenario_name ? "#{@scenario_name}_#{name}" : name).to_sym
-    end
+      def cleaned_up_attributes_for_record(record)
+        attributes = record.attributes.dup
+        attributes.each do |key, value|
+          case value
+          when Date, Time, DateTime
+            attributes[key] = value.to_s(:db)
+          when Array, Hash
+            attributes[key] = value.to_yaml
+          end
+        end
+      
+        attributes.stringify_keys!
+      end
+
+      def delete_old_yml_fixtures
+        Dir.glob(RAILS_ROOT + "/test/fixtures/*.yml").each do |file|
+          File.delete(file)
+        end
+      end
     
-    def checksum
-      Digest::SHA1.hexdigest(read_fixtures_file)
-    end
+      def add_fixture(fixture_model_name, name, record, logging_name = name)
+        verb = !@fixtures[fixture_model_name][name.to_sym].nil? ? 'Updating' : 'Creating'
+        puts "#{verb} #{fixture_model_name.to_s.singularize} :#{logging_name}"
+      
+        @fixtures[fixture_model_name][name.to_sym] = record
+      end
     
-    def read_checksum
-      IO.read(@@checksum_file) rescue nil
-    end
+      def fixture_name_in_scenario(name)
+        (@scenario_name ? "#{@scenario_name}_#{name}" : name).to_sym
+      end
     
-    def write_checksum
-      File.open(@@checksum_file, 'w') { |f| f.write(checksum) }
-    end
+      def checksum
+        Digest::SHA1.hexdigest(read_fixtures_file)
+      end
     
-    def read_fixtures_file
-      File.read(@@fixtures_file)
-    end
+      def read_checksum
+        IO.read(@checksum_file) rescue nil
+      end
+    
+      def write_checksum
+        File.open(@checksum_file, 'w') { |f| f.write(checksum) }
+      end
+    
+      def read_fixtures_file
+        File.read(@fixtures_file)
+      end
   end
 end
