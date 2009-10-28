@@ -1,11 +1,12 @@
 ActiveRecord::Schema.define(:version => 0) do
-  create_table :spaceships, :force => true do |t| 
-    t.integer :flags, :null => false, :default => 0
+  create_table :users, :force => true do |t| 
+    t.string :login, :null => false
   end 
 end
 
 ActiveRecord::Schema.define(:version => 0) do
-  create_table :spaceships_with_custom_flags_column, :force => true do |t| 
-    t.integer :bits, :null => false, :default => 0
+  create_table :documents, :force => true do |t| 
+    t.string :name, :null => false
+    t.text :content, :null => true
   end 
 end
